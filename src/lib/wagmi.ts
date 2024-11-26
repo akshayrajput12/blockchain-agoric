@@ -1,5 +1,9 @@
-import { createWeb3Modal, defaultWagmiConfig } from '@web3modal/wagmi/react';
+import { createWeb3Modal } from '@web3modal/wagmi/react';
+import { configureChains, createConfig } from 'wagmi';
 import { mainnet, hardhat } from 'viem/chains';
+import { publicProvider } from 'wagmi/providers/public';
+import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
+import { WalletConnectConnector } from 'wagmi/connectors/walletConnect';
 
 // Get projectId at https://cloud.walletconnect.com
 const projectId = 'e81f503a854c7cd03cb88213ce45ba67';
@@ -25,23 +29,38 @@ const localHardhat = {
   },
 };
 
+// Configure chains & providers
+const { chains, publicClient, webSocketPublicClient } = configureChains(
+  [localHardhat, mainnet],
+  [publicProvider()]
+);
+
+// Set up connectors
+const connectors = [
+  new MetaMaskConnector({ chains }),
+  new WalletConnectConnector({
+    chains,
+    options: {
+      projectId,
+    },
+  }),
+];
+
 // Create wagmiConfig
+export const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors,
+  publicClient,
+  webSocketPublicClient,
+});
+
+// Create modal configuration
 const metadata = {
   name: 'UIMS Platform',
   description: 'UIMS Platform Web3 Integration',
   url: typeof window !== 'undefined' ? window.location.origin : '',
   icons: ['https://avatars.githubusercontent.com/u/37784886']
 };
-
-// Add all supported chains
-const chains = [localHardhat, mainnet];
-
-// Create wagmiConfig
-export const wagmiConfig = defaultWagmiConfig({
-  chains,
-  projectId,
-  metadata,
-});
 
 // Initialize modal
 createWeb3Modal({
