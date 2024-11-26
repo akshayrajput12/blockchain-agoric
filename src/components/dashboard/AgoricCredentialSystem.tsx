@@ -1,9 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import { FiUpload, FiX, FiCheck, FiClock } from 'react-icons/fi';
+import { credentialAPI } from '../../lib/supabase/api';
+import type { Credential } from '../../lib/supabase/types';
 
 interface Credential {
   id: string;
@@ -13,17 +15,19 @@ interface Credential {
   title: string;
   description: string;
   data: any;
-  image: string;
-  expiryDate: string;
-  issuanceDate: string;
+  image_url: string;
+  expiry_date: string;
+  issuance_date: string;
   category: string;
   tags: string[];
   signature: string;
-  timestamp: number;
-  chainId: number;
-  verificationStatus: 'unverified' | 'verified' | 'expired' | 'invalid';
-  lastVerified?: number;
-  verificationCount: number;
+  chain_id: number;
+  verification_status: 'unverified' | 'verified' | 'expired' | 'invalid';
+  verification_count: number;
+  created_at: string;
+  metadata: {
+    issuer_name: string;
+  };
 }
 
 export const AgoricCredentialSystem: React.FC = () => {
@@ -42,6 +46,27 @@ export const AgoricCredentialSystem: React.FC = () => {
   });
   const [newTag, setNewTag] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (address) {
+      loadCredentials();
+    }
+  }, [address]);
+
+  const loadCredentials = async () => {
+    try {
+      setIsLoading(true);
+      const data = await credentialAPI.getCredentials(address!);
+      setCredentials(data);
+      toast.success('Credentials loaded successfully');
+    } catch (error) {
+      console.error('Error loading credentials:', error);
+      toast.error('Failed to load credentials');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -94,131 +119,113 @@ export const AgoricCredentialSystem: React.FC = () => {
         return;
       }
 
+      setIsLoading(true);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const network = await provider.getNetwork();
-      
-      const credential: Credential = {
-        id: ethers.randomBytes(32).toString('hex'),
+
+      // Create base credential object
+      const credentialData: Omit<Credential, 'id' | 'created_at'> = {
         issuer: address || '',
         holder: address || '',
         type: newCredential.type,
         title: newCredential.title,
         description: newCredential.description,
         data: newCredential.data,
-        image: newCredential.image,
-        expiryDate: newCredential.expiryDate,
-        issuanceDate: newCredential.issuanceDate,
+        image_url: '',
+        expiry_date: newCredential.expiryDate,
+        issuance_date: newCredential.issuanceDate,
         category: newCredential.category,
         tags: newCredential.tags,
-        timestamp: Date.now(),
-        chainId: Number(network.chainId),
         signature: '',
-        verificationStatus: 'unverified',
-        verificationCount: 0
+        chain_id: Number(network.chainId),
+        verification_status: 'unverified',
+        verification_count: 0,
+        metadata: {
+          issuer_name: address,
+        }
       };
 
+      // Sign the credential
       const message = ethers.solidityPackedKeccak256(
-        ['string', 'address', 'address', 'string', 'string', 'string', 'string', 'string', 'uint256', 'uint256'],
+        ['string', 'string', 'string', 'string', 'string', 'uint256'],
         [
-          credential.id,
-          credential.issuer,
-          credential.holder,
-          credential.type,
-          credential.title,
-          credential.expiryDate,
-          credential.issuanceDate,
-          JSON.stringify(credential.data),
-          credential.timestamp,
-          credential.chainId
+          credentialData.title,
+          credentialData.issuer,
+          credentialData.holder,
+          credentialData.type,
+          credentialData.expiry_date,
+          credentialData.chain_id
         ]
       );
 
       const signature = await signer.signMessage(ethers.getBytes(message));
-      credential.signature = signature;
+      credentialData.signature = signature;
 
-      setCredentials([...credentials, credential]);
-      toast.success('Credential created successfully');
+      // Upload image if exists
+      if (newCredential.image) {
+        const imageFile = await fetch(newCredential.image).then(r => r.blob());
+        const file = new File([imageFile], 'credential-image.png', { type: 'image/png' });
+        const savedCredential = await credentialAPI.createCredential(credentialData);
+        const imageUrl = await credentialAPI.uploadCredentialImage(savedCredential.id, file);
+        credentialData.image_url = imageUrl;
+      }
+
+      // Save credential to Supabase
+      await credentialAPI.createCredential(credentialData);
       
-      // Reset form
-      setNewCredential({
-        type: '',
-        title: '',
-        description: '',
-        data: '',
-        image: '',
-        expiryDate: '',
-        issuanceDate: new Date().toISOString().split('T')[0],
-        category: '',
-        tags: [],
-      });
-      setPreviewImage(null);
-
+      toast.success('Credential created successfully');
+      resetForm();
+      await loadCredentials();
     } catch (error) {
       console.error('Error creating credential:', error);
       toast.error('Failed to create credential');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const verifyCredential = async (credential: Credential) => {
     try {
+      setIsLoading(true);
       const message = ethers.solidityPackedKeccak256(
-        ['string', 'address', 'address', 'string', 'string', 'string', 'string', 'string', 'uint256', 'uint256'],
+        ['string', 'string', 'string', 'string', 'string', 'uint256'],
         [
-          credential.id,
+          credential.title,
           credential.issuer,
           credential.holder,
           credential.type,
-          credential.title,
-          credential.expiryDate,
-          credential.issuanceDate,
-          JSON.stringify(credential.data),
-          credential.timestamp,
-          credential.chainId
+          credential.expiry_date,
+          credential.chain_id
         ]
       );
 
       const recoveredAddress = ethers.verifyMessage(ethers.getBytes(message), credential.signature);
       const isValidSignature = recoveredAddress.toLowerCase() === credential.issuer.toLowerCase();
+      const isExpired = new Date(credential.expiry_date) < new Date();
+
+      const status = isExpired ? 'expired' : (isValidSignature ? 'verified' : 'invalid');
       
-      // Check expiry
-      const isExpired = new Date(credential.expiryDate) < new Date();
-      
-      // Update verification status
-      const updatedCredentials = credentials.map(cred => {
-        if (cred.id === credential.id) {
-          return {
-            ...cred,
-            verificationStatus: isExpired ? 'expired' : (isValidSignature ? 'verified' : 'invalid'),
-            lastVerified: Date.now(),
-            verificationCount: cred.verificationCount + 1
-          };
-        }
-        return cred;
-      });
-      
-      setCredentials(updatedCredentials);
+      // Update verification status in Supabase
+      await credentialAPI.updateVerificationStatus(credential.id, status);
+      await loadCredentials();
 
       if (isExpired) {
         toast.error('Credential has expired');
-        return false;
-      }
-      
-      if (isValidSignature) {
+      } else if (isValidSignature) {
         toast.success('Credential verified successfully');
-        return true;
       } else {
         toast.error('Invalid credential signature');
-        return false;
       }
     } catch (error) {
       console.error('Error verifying credential:', error);
       toast.error('Failed to verify credential');
-      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getVerificationStatusColor = (status: Credential['verificationStatus']) => {
+  const getVerificationStatusColor = (status: Credential['verification_status']) => {
     switch (status) {
       case 'verified':
         return 'text-neon-green';
@@ -231,7 +238,7 @@ export const AgoricCredentialSystem: React.FC = () => {
     }
   };
 
-  const getVerificationStatusIcon = (status: Credential['verificationStatus']) => {
+  const getVerificationStatusIcon = (status: Credential['verification_status']) => {
     switch (status) {
       case 'verified':
         return <FiCheck className="w-4 h-4" />;
@@ -242,6 +249,21 @@ export const AgoricCredentialSystem: React.FC = () => {
       default:
         return <FiClock className="w-4 h-4" />;
     }
+  };
+
+  const resetForm = () => {
+    setNewCredential({
+      type: '',
+      title: '',
+      description: '',
+      data: '',
+      image: '',
+      expiryDate: '',
+      issuanceDate: new Date().toISOString().split('T')[0],
+      category: '',
+      tags: [],
+    });
+    setPreviewImage(null);
   };
 
   return (
@@ -407,71 +429,81 @@ export const AgoricCredentialSystem: React.FC = () => {
 
       <div className="space-y-4">
         <h2 className="text-2xl font-bold text-white">Your Credentials</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {credentials.map((cred) => (
-            <div key={cred.id} className="p-4 bg-dark-700 rounded-lg border border-neon-blue/20">
-              <div className="flex flex-col gap-3">
-                {cred.image && (
-                  <img
-                    src={cred.image}
-                    alt={cred.title}
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
-                )}
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-neon-blue font-semibold text-lg">{cred.title}</h3>
-                      <span className={`flex items-center gap-1 ${getVerificationStatusColor(cred.verificationStatus)}`}>
-                        {getVerificationStatusIcon(cred.verificationStatus)}
-                        <span className="text-sm capitalize">{cred.verificationStatus}</span>
-                      </span>
-                    </div>
-                    <p className="text-white">{cred.type}</p>
-                    <p className="text-gray-400 text-sm">ID: {cred.id.substring(0, 8)}...</p>
-                    <p className="text-gray-400 text-sm">Issuer: {cred.issuer.substring(0, 8)}...</p>
-                    <p className="text-gray-400 text-sm">Chain ID: {cred.chainId}</p>
-                    <p className="text-gray-400 text-sm">
-                      Valid: {new Date(cred.issuanceDate).toLocaleDateString()} - {new Date(cred.expiryDate).toLocaleDateString()}
-                    </p>
-                    {cred.lastVerified && (
-                      <p className="text-gray-400 text-sm">
-                        Last Verified: {new Date(cred.lastVerified).toLocaleString()}
-                      </p>
-                    )}
-                    {cred.verificationCount > 0 && (
-                      <p className="text-gray-400 text-sm">
-                        Verified {cred.verificationCount} time{cred.verificationCount !== 1 ? 's' : ''}
-                      </p>
-                    )}
-                    {cred.tags.length > 0 && (
-                      <div className="flex gap-2 flex-wrap mt-2">
-                        {cred.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-neon-blue/20 rounded-lg text-sm text-white"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+        {isLoading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-neon-blue"></div>
+          </div>
+        ) : credentials.length === 0 ? (
+          <div className="text-center text-gray-400 py-8">
+            No credentials found. Create your first credential above.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {credentials.map((cred) => (
+              <div key={cred.id} className="p-4 bg-dark-700 rounded-lg border border-neon-blue/20">
+                <div className="flex flex-col gap-3">
+                  {cred.image_url && (
+                    <img
+                      src={cred.image_url}
+                      alt={cred.title}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-neon-blue font-semibold text-lg">{cred.title}</h3>
+                        <span className={`flex items-center gap-1 ${getVerificationStatusColor(cred.verification_status)}`}>
+                          {getVerificationStatusIcon(cred.verification_status)}
+                          <span className="text-sm capitalize">{cred.verification_status}</span>
+                        </span>
                       </div>
-                    )}
+                      <p className="text-white">{cred.type}</p>
+                      <p className="text-gray-400 text-sm">ID: {cred.id.substring(0, 8)}...</p>
+                      <p className="text-gray-400 text-sm">Issuer: {cred.issuer.substring(0, 8)}...</p>
+                      <p className="text-gray-400 text-sm">Chain ID: {cred.chain_id}</p>
+                      <p className="text-gray-400 text-sm">
+                        Valid: {new Date(cred.issuance_date).toLocaleDateString()} - {new Date(cred.expiry_date).toLocaleDateString()}
+                      </p>
+                      {cred.metadata && (
+                        <p className="text-gray-400 text-sm">
+                          Issuer Name: {cred.metadata.issuer_name}
+                        </p>
+                      )}
+                      {cred.verification_count > 0 && (
+                        <p className="text-gray-400 text-sm">
+                          Verified {cred.verification_count} time{cred.verification_count !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                      {cred.tags.length > 0 && (
+                        <div className="flex gap-2 flex-wrap mt-2">
+                          {cred.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-neon-blue/20 rounded-lg text-sm text-white"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => verifyCredential(cred)}
+                      className={`px-4 py-2 bg-gradient-to-r text-white rounded-lg 
+                               hover:shadow-neon-glow transition-all duration-300
+                               ${cred.verification_status === 'verified' 
+                                 ? 'from-neon-green to-neon-blue' 
+                                 : 'from-neon-blue to-neon-purple'}`}
+                    >
+                      {cred.verification_status === 'verified' ? 'Verify Again' : 'Verify'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => verifyCredential(cred)}
-                    className={`px-4 py-2 bg-gradient-to-r text-white rounded-lg 
-                             hover:shadow-neon-glow transition-all duration-300
-                             ${cred.verificationStatus === 'verified' 
-                               ? 'from-neon-green to-neon-blue' 
-                               : 'from-neon-blue to-neon-purple'}`}
-                  >
-                    {cred.verificationStatus === 'verified' ? 'Verify Again' : 'Verify'}
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
