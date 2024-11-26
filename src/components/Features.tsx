@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, Link, Lock, Globe, Wallet } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const features = [
   {
@@ -30,23 +31,110 @@ const features = [
 ];
 
 export default function Features() {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 20,
+      },
+    },
+  };
+
   return (
-    <section className="py-24 bg-black/30">
+    <motion.section 
+      className="py-24 bg-black/30"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8 }}
+    >
       <div className="container mx-auto px-6">
-        <h2 className="text-4xl font-bold text-center mb-16">Why Choose UIMS?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <motion.h2 
+          className="text-4xl font-bold text-center mb-16 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          Why Choose UIMS?
+        </motion.h2>
+        
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+        >
           {features.map((feature, index) => (
-            <div
+            <motion.div
               key={index}
-              className="p-8 rounded-xl bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 group"
+              variants={itemVariants}
+              className="p-8 rounded-xl backdrop-blur-sm relative overflow-hidden group"
+              whileHover={{ scale: 1.02 }}
+              style={{
+                background: "linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))",
+              }}
             >
-              <feature.icon className="w-12 h-12 mb-6 text-blue-400 group-hover:text-purple-400 transition-colors duration-300" />
-              <h3 className="text-xl font-semibold mb-4">{feature.title}</h3>
-              <p className="text-gray-400">{feature.description}</p>
-            </div>
+              {/* Animated gradient border */}
+              <motion.div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                initial={false}
+                style={{
+                  background: "linear-gradient(45deg, rgba(59, 130, 246, 0.5), rgba(147, 51, 234, 0.5))",
+                  filter: "blur(20px)",
+                  zIndex: -1,
+                }}
+                animate={{
+                  rotate: [0, 360],
+                }}
+                transition={{
+                  duration: 8,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              />
+              
+              <motion.div
+                whileHover={{ rotate: 360, scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 10 }}
+              >
+                <feature.icon className="w-12 h-12 mb-6 text-blue-400 group-hover:text-purple-400 transition-colors duration-300" />
+              </motion.div>
+              
+              <motion.h3 
+                className="text-xl font-semibold mb-4"
+                initial={{ opacity: 0.8 }}
+                whileHover={{ opacity: 1 }}
+              >
+                {feature.title}
+              </motion.h3>
+              
+              <motion.p 
+                className="text-gray-400"
+                initial={{ opacity: 0.6 }}
+                whileHover={{ opacity: 1 }}
+              >
+                {feature.description}
+              </motion.p>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 }
