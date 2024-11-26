@@ -7,17 +7,23 @@ import { queryClient } from './lib/queryClient';
 import App from './App';
 import './index.css';
 
+// Initialize React Query and Wagmi before rendering
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');
 
 const root = createRoot(rootElement);
 
-root.render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <WagmiConfig config={wagmiConfig}>
-        <App />
-      </WagmiConfig>
-    </QueryClientProvider>
-  </StrictMode>
-);
+// Wrap the app with error boundary
+const AppWithProviders = () => {
+  return (
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <WagmiConfig config={wagmiConfig}>
+          <App />
+        </WagmiConfig>
+      </QueryClientProvider>
+    </StrictMode>
+  );
+};
+
+root.render(<AppWithProviders />);

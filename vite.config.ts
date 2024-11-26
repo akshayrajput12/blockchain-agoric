@@ -6,7 +6,10 @@ import { visualizer } from 'rollup-plugin-visualizer';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      jsxRuntime: 'automatic',
+      fastRefresh: true,
+    }),
     visualizer({
       filename: './dist/stats.html',
       open: false,
@@ -18,6 +21,12 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
+  server: {
+    port: 5173,
+    strictPort: true,
+    host: true,
+    open: true,
+  },
   optimizeDeps: {
     esbuildOptions: {
       target: 'esnext',
@@ -28,75 +37,25 @@ export default defineConfig({
       'react-router-dom',
       '@headlessui/react',
       'framer-motion',
+      'wagmi',
+      '@web3modal/wagmi',
     ],
   },
   build: {
     target: 'esnext',
+    sourcemap: true,
     commonjsOptions: {
       transformMixedEsModules: true,
     },
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // Core React dependencies
-          if (id.includes('node_modules/react') || 
-              id.includes('node_modules/react-dom') || 
-              id.includes('node_modules/react-router-dom')) {
-            return 'react-core';
-          }
-          
-          // UI related dependencies
-          if (id.includes('node_modules/@headlessui') || 
-              id.includes('node_modules/lucide-react') || 
-              id.includes('node_modules/framer-motion')) {
-            return 'ui-vendor';
-          }
-          
-          // Web3 related dependencies - split into smaller chunks
-          if (id.includes('node_modules/wagmi') || 
-              id.includes('node_modules/@wagmi')) {
-            return 'wagmi-vendor';
-          }
-          if (id.includes('node_modules/ethers')) {
-            return 'ethers-vendor';
-          }
-          if (id.includes('node_modules/web3')) {
-            return 'web3-core';
-          }
-          
-          // Data management dependencies
-          if (id.includes('node_modules/@supabase') || 
-              id.includes('node_modules/@tanstack/react-query') || 
-              id.includes('node_modules/zustand')) {
-            return 'data-vendor';
-          }
-        },
-        assetFileNames: (assetInfo) => {
-          let extType = assetInfo.name.split('.').at(1);
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
-            extType = 'img';
-          }
-          return `assets/${extType}/[name]-[hash][extname]`;
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'web3-vendor': ['wagmi', '@web3modal/wagmi'],
+          'ui-vendor': ['@headlessui/react', 'framer-motion'],
         },
       },
     },
-    chunkSizeWarningLimit: 500,
-    sourcemap: process.env.NODE_ENV === 'development',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.trace'],
-      },
-      mangle: {
-        safari10: true,
-      },
-      format: {
-        comments: false,
-      },
-    },
-    cssCodeSplit: true,
-    assetsInlineLimit: 4096,
+    chunkSizeWarningLimit: 1000,
   },
 });
