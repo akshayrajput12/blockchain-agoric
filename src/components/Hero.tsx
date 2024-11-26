@@ -18,13 +18,14 @@ export default function Hero() {
     }
   };
 
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.3,
+        staggerChildren: 0.3,
+        delayChildren: 0.2,
       },
     },
   };
@@ -41,112 +42,138 @@ export default function Hero() {
     },
   };
 
+  const glowVariants = {
+    initial: { scale: 1, opacity: 0.5 },
+    animate: {
+      scale: [1, 1.2, 1],
+      opacity: [0.5, 0.8, 0.5],
+      transition: {
+        duration: 3,
+        repeat: Infinity,
+        ease: "easeInOut",
+      },
+    },
+  };
+
+  const buttonVariants = {
+    initial: { scale: 1 },
+    hover: { 
+      scale: 1.05,
+      boxShadow: "0 0 15px rgb(99, 102, 241)",
+      transition: {
+        duration: 0.2,
+        ease: "easeInOut",
+      },
+    },
+    tap: { scale: 0.95 },
+  };
+
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Enhanced animated background */}
-      <motion.div 
-        className="absolute inset-0 overflow-hidden"
+      {/* Animated background elements */}
+      <motion.div
+        className="absolute inset-0 z-0"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: 0.1 }}
         transition={{ duration: 1.5 }}
       >
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
-        <motion.div 
-          className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.3, 0.2, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            repeatType: "reverse",
-          }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.15)_0%,transparent_70%)]" />
       </motion.div>
 
-      <motion.div 
-        className="relative z-10 container mx-auto px-6 text-center"
+      {/* Floating shapes */}
+      <motion.div
+        className="absolute top-20 left-20 w-32 h-32 bg-indigo-500/10 rounded-full blur-xl"
+        animate={{
+          y: [0, 30, 0],
+          x: [0, 20, 0],
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      <motion.div
+        className="absolute bottom-20 right-20 w-40 h-40 bg-purple-500/10 rounded-full blur-xl"
+        animate={{
+          y: [0, -40, 0],
+          x: [0, -30, 0],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* Main content */}
+      <motion.div
+        className="relative z-10 container mx-auto px-6 py-16 text-center"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.h1 
-          className="text-5xl md:text-7xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
+        {/* Glowing circle behind title */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-3xl"
+          variants={glowVariants}
+          initial="initial"
+          animate="animate"
+        />
+
+        <motion.h1
+          className="text-5xl md:text-6xl lg:text-7xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500"
           variants={itemVariants}
         >
-          Empower Your Digital Identity
+          Secure Your Digital Legacy
         </motion.h1>
-        
-        <motion.p 
-          className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto"
+
+        <motion.p
+          className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto"
           variants={itemVariants}
         >
-          Take control of your identity with a universal system designed for privacy, interoperability, and trust.
+          Transform how you manage and transfer digital assets with our innovative blockchain solution.
         </motion.p>
 
-        <motion.div 
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-          variants={itemVariants}
+        <motion.button
+          onClick={handleGetStarted}
+          className="px-8 py-4 bg-indigo-600 text-white rounded-lg font-semibold flex items-center justify-center mx-auto space-x-2 hover:bg-indigo-700 transition-colors"
+          variants={buttonVariants}
+          initial="initial"
+          whileHover="hover"
+          whileTap="tap"
         >
-          <motion.button 
-            onClick={handleGetStarted}
-            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-semibold 
-                     transition-all duration-200 flex items-center justify-center group shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {isConnected ? 'Go to Dashboard' : 'Get Started'}
-            <motion.span
-              className="ml-2"
-              whileHover={{ x: 5 }}
-              transition={{ type: "spring", stiffness: 400 }}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </motion.span>
-          </motion.button>
-          
-          <motion.button 
-            className="px-8 py-4 bg-white/10 rounded-lg font-semibold transition-all duration-200"
-            whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.2)" }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Learn More
-          </motion.button>
-        </motion.div>
+          <span>Get Started</span>
+          <ChevronRight className="w-5 h-5" />
+        </motion.button>
 
-        {/* Enhanced 3D Illustration */}
-        <motion.div 
-          className="mt-16 relative"
-          variants={itemVariants}
+        {/* Animated features grid */}
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          <motion.img
-            src="https://images.unsplash.com/photo-1633412802994-5c058f151b66?auto=format&fit=crop&w=800&q=80"
-            alt="Digital Identity Network"
-            className="rounded-xl shadow-2xl mx-auto max-w-3xl w-full"
-            initial={{ opacity: 0.8 }}
-            animate={{
-              y: [0, -10, 0],
-              opacity: [0.8, 1, 0.8],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              repeatType: "reverse",
-              ease: "easeInOut",
-            }}
-          />
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"
-            animate={{
-              opacity: [0.7, 0.5, 0.7],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              repeatType: "reverse",
-            }}
-          />
+          {[
+            { title: "Secure", desc: "Military-grade encryption" },
+            { title: "Decentralized", desc: "Powered by blockchain" },
+            { title: "User-Friendly", desc: "Intuitive interface" },
+          ].map((feature, index) => (
+            <motion.div
+              key={index}
+              className="p-6 rounded-xl bg-gray-800/50 backdrop-blur-sm border border-gray-700"
+              variants={itemVariants}
+              whileHover={{
+                scale: 1.05,
+                backgroundColor: "rgba(31, 41, 55, 0.7)",
+                transition: { duration: 0.2 },
+              }}
+            >
+              <h3 className="text-xl font-semibold mb-2 text-indigo-400">{feature.title}</h3>
+              <p className="text-gray-400">{feature.desc}</p>
+            </motion.div>
+          ))}
         </motion.div>
       </motion.div>
     </div>
