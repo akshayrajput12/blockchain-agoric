@@ -1,41 +1,102 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAccount } from 'wagmi';
+import { DashboardLayout } from './components/dashboard/DashboardLayout';
+import { DashboardHome } from './pages/dashboard/DashboardHome';
+import { Profile } from './pages/dashboard/Profile';
+import { Credentials } from './pages/dashboard/Credentials';
+import TimeCapsuleDashboard from './components/dashboard/TimeCapsuleDashboard';
 import Hero from './components/Hero';
-import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
 import UseCases from './components/UseCases';
 import Security from './components/Security';
-import CTA from './components/CTA';
 import Footer from './components/Footer';
-import ConnectWallet from './components/shared/ConnectWallet';
-import DIDGenerator from './components/auth/DIDGenerator';
-import CredentialWallet from './components/credentials/CredentialWallet';
-import { useAuthStore } from './lib/store';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Toaster } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
-function App() {
-  const { isAuthenticated, did } = useAuthStore();
+const LandingPage: React.FC = () => {
+  const { isConnected } = useAccount();
+
+  if (isConnected) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 text-white">
-      <div className="fixed top-4 right-4 z-50">
-        <ConnectWallet />
-      </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen bg-dark-900 bg-cyber-grid bg-[size:50px_50px]"
+    >
       <Hero />
-      <Features />
       <HowItWorks />
-      {isAuthenticated && !did && (
-        <div className="container mx-auto px-6 py-12">
-          <DIDGenerator />
-        </div>
-      )}
-      {isAuthenticated && did && (
-        <CredentialWallet />
-      )}
       <UseCases />
       <Security />
-      <CTA />
       <Footer />
-    </div>
+    </motion.div>
   );
-}
+};
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <div className="min-h-screen bg-dark-900">
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            className: '!bg-dark-800 !text-neon-blue border border-dark-600 shadow-neon-blue',
+          }}
+        />
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <DashboardHome />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/profile"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Profile />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/credentials"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Credentials />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/time-capsules"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <TimeCapsuleDashboard />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AnimatePresence>
+      </div>
+    </Router>
+  );
+};
 
 export default App;

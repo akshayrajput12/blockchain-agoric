@@ -1,7 +1,22 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { useAccount } from 'wagmi';
+import { useNavigate } from 'react-router-dom';
 
 export default function Hero() {
+  const { open } = useWeb3Modal();
+  const { isConnected } = useAccount();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (isConnected) {
+      navigate('/dashboard');
+    } else {
+      open();
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated background */}
@@ -17,8 +32,14 @@ export default function Hero() {
           Take control of your identity with a universal system designed for privacy, interoperability, and trust.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-200 flex items-center justify-center group">
-            Get Started
+          <button 
+            onClick={handleGetStarted}
+            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-semibold 
+                     hover:from-blue-600 hover:to-purple-600 transition-all duration-200 
+                     flex items-center justify-center group shadow-lg hover:shadow-xl
+                     transform hover:scale-105"
+          >
+            {isConnected ? 'Go to Dashboard' : 'Get Started'}
             <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
           <button className="px-8 py-4 bg-white/10 rounded-lg font-semibold hover:bg-white/20 transition-all duration-200">
